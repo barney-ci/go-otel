@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
 
@@ -22,7 +23,7 @@ const EnvironCarrierPrefix = "OTELTEXTMAP_" // exactly 1 underscore, trailing
 // ContextWithEnvPropagation returns a copy of a parent Context
 // with trace context propagation from the process environment.
 func ContextWithEnvPropagation(parent context.Context) context.Context {
-	return propagation.TraceContext{}.Extract(parent, EnvironCarrier{})
+	return otel.GetTextMapPropagator().Extract(parent, EnvironCarrier{})
 }
 
 // MapCarrierAsEnviron returns the contents of a MapCarrier as
