@@ -13,6 +13,7 @@ kind: Deployment
 spec:
   template:
     spec:
+      containers:
         env:
         - name: JAEGER_ENABLED
           value: "true"
