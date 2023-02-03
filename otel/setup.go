@@ -87,9 +87,18 @@ func WithErrorPrinter(p printer) setupOptionFunc {
 	})
 }
 
+// WithSampler causes JaegerSetup to configure Jaeger
+// with the provided sampler only
+func WithSampler(s trace.Sampler) setupOptionFunc {
+	return setupOptionFunc(func(opts *setupConfig) {
+		opts.sampler = s
+	})
+}
+
 // WithRemoteSampler causes JaegerSetup to configure Jaeger
 // with a remote sampler URL constructed using the environment
-// variable defined by EnvSamplerTemplateName
+// variable defined by EnvSamplerTemplateName, falling back
+// to any previously configured sampler
 func WithRemoteSampler() setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
 		if samplerURL := os.Getenv(EnvSamplerTemplateName); samplerURL != "" {
@@ -121,7 +130,15 @@ func (p printer) printf(format string, args ...interface{}) {
 }
 
 // JaegerSetup returns a jaeger TracerProvider
-// and a closer function to shut down the provider
+// and a closer function to shut down the provider.
+//
+// Options order can be important. For example, WithRemoteSampler
+// sets the sampler to one that falls back to any existing sampler,
+// whilst WithSampler sets the sampler to the passed argument and
+// overwrites the existing sampler.
+//
+// It's a good idea to pass WithErrorPrinter first, so errors
+// raised by subsequent options will be sent to that callback.
 func JaegerSetup(name string, with ...setupOptionFunc) (
 	tp *trace.TracerProvider, closer closerFunc, err error,
 ) {
