@@ -1,4 +1,4 @@
-module barney.ci/util
+module barney.ci/go-otel
 
 go 1.16
 
