@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"strings"
@@ -33,6 +34,12 @@ type setupOptionFunc func(*setupConfig)
 type printer func(string, ...interface{})
 
 type closerFunc func() error
+
+var _ io.Closer = closerFunc(nil)
+
+func (f closerFunc) Close() error {
+	return f()
+}
 
 const EnvSamplerTemplateName = "OTEL_SAMPLER_JAEGER_CONFIG_URL_TEMPLATE"
 const EnvGateName = "JAEGER_ENABLED"
