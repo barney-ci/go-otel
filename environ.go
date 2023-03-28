@@ -4,6 +4,7 @@
 package otel
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -38,13 +39,49 @@ func MapCarrierAsEnviron(mc propagation.MapCarrier) []string {
 	return ret
 }
 
+func transcode(s string, specialIn, specialOut byte) (string, error) {
+	var ret []byte
+	var out byte
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c == specialIn:
+			out = specialOut
+		case c >= 'A' && c <= 'Z':
+			out = c
+		case c >= 'a' && c <= 'z':
+			out = c
+		default:
+			return "", fmt.Errorf("cannot handle character '%c'", c)
+		}
+		ret = append(ret, out)
+	}
+	return string(bytes.ToUpper(ret)), nil
+}
+
+func envEncode(s string) (string, error) {
+	return transcode(s, '-', '_')
+}
+
+func envDecode(s string) (string, error) {
+	return transcode(s, '_', '-')
+}
+
 func (e EnvironCarrier) Get(key string) string {
-	envName := EnvironCarrierPrefix + key
+	envKey, err := envEncode(key)
+	if err != nil {
+		panic(err)
+	}
+	envName := EnvironCarrierPrefix + envKey
 	return os.Getenv(envName)
 }
 
 func (e EnvironCarrier) Set(key string, value string) {
-	envName := EnvironCarrierPrefix + key
+	envKey, err := envEncode(key)
+	if err != nil {
+		panic(err)
+	}
+	envName := EnvironCarrierPrefix + envKey
 	os.Setenv(envName, value)
 }
 
@@ -59,7 +96,11 @@ func (e EnvironCarrier) Keys() []string {
 		if varName == "" {
 			continue
 		}
-		ret = append(ret, varName)
+		key, err := envDecode(varName)
+		if err != nil {
+			continue
+		}
+		ret = append(ret, key)
 	}
 	return ret
 }
