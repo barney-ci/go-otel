@@ -2,14 +2,14 @@ package otel
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"net/url"
+	"log"
 	"os"
-	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
 	"go.opentelemetry.io/contrib/samplers/jaegerremote"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
@@ -23,15 +23,13 @@ type setupConfig struct {
 	name            string
 	envGate         bool
 	shutdownTimeout time.Duration
-	errPrinter      printer
+	logger          logr.Logger
 	exporter        trace.SpanExporter
 	sampler         trace.Sampler
 	propagator      propagation.TextMapPropagator
 }
 
 type setupOptionFunc func(*setupConfig)
-
-type printer func(string, ...interface{})
 
 type closerFunc func() error
 
@@ -86,11 +84,13 @@ func WithGeneralPropagatorSetup() setupOptionFunc {
 	})
 }
 
-// WithErrorPrinter causes JaegerSetup to call a printf-like
-// function with error messages
-func WithErrorPrinter(p printer) setupOptionFunc {
+// WithLogger configures the given logger to be used for printing errors
+// or info at runtime emitted by the tracer implementation. If unset,
+// a default value of github.com/go-logr/stdr.New(log.Default()) will
+// be used.
+func WithLogger(logger logr.Logger) setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
-		opts.errPrinter = p
+		opts.logger = logger
 	})
 }
 
@@ -110,10 +110,11 @@ func WithRemoteSampler() setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
 		if samplerURL := os.Getenv(EnvSamplerTemplateName); samplerURL != "" {
 			samplerURL = os.ExpandEnv(samplerURL)
-			samplerURL = strings.ReplaceAll(samplerURL, "{}", url.QueryEscape(opts.name))
 			opts.sampler = jaegerremote.New(opts.name,
 				jaegerremote.WithSamplingServerURL(samplerURL),
-				jaegerremote.WithInitialSampler(opts.sampler))
+				jaegerremote.WithInitialSampler(opts.sampler),
+				jaegerremote.WithLogger(opts.logger),
+			)
 		}
 	})
 }
@@ -130,12 +131,6 @@ func WithAgentExporter() setupOptionFunc {
 	})
 }
 
-func (p printer) printf(format string, args ...interface{}) {
-	if p != nil {
-		p(format, args...)
-	}
-}
-
 // JaegerSetup returns a jaeger TracerProvider
 // and a closer function to shut down the provider.
 //
@@ -144,7 +139,7 @@ func (p printer) printf(format string, args ...interface{}) {
 // whilst WithSampler sets the sampler to the passed argument and
 // overwrites the existing sampler.
 //
-// It's a good idea to pass WithErrorPrinter first, so errors
+// It's a good idea to pass WithLogger first, so errors
 // raised by subsequent options will be sent to that callback.
 func JaegerSetup(name string, with ...setupOptionFunc) (
 	tp *trace.TracerProvider, closer closerFunc, err error,
@@ -164,11 +159,11 @@ func JaegerSetup(name string, with ...setupOptionFunc) (
 		name:     name,
 		sampler:  trace.AlwaysSample(),
 		exporter: nullExporter{},
+		logger:   stdr.New(log.Default()),
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New(fmt.Sprintf("%s", r))
-			opts.errPrinter.printf("%s", r)
+			opts.logger.Error(fmt.Errorf("%s", r), "panic occurred in JaegerSetup")
 		}
 	}()
 	for _, fn := range with {
@@ -202,7 +197,7 @@ func JaegerSetup(name string, with ...setupOptionFunc) (
 			ctx = context.Background()
 		}
 		err := tp.Shutdown(ctx)
-		opts.errPrinter.printf("jaeger shutdown: %s", err)
+		opts.logger.Error(err, "jaeger shutdown error")
 		return err
 	})
 

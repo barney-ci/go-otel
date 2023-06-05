@@ -22,8 +22,13 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         - name: OTEL_SAMPLER_JAEGER_CONFIG_URL_TEMPLATE
-          value: http://${OTEL_EXPORTER_JAEGER_AGENT_HOST}:5778/sampling?service={}
+          value: http://${OTEL_EXPORTER_JAEGER_AGENT_HOST}:5778/
 ```
+
+Please note that there are a few similar-looking URLs floating around for the URL_TEMPLATE.
+The different URLs are meant for different collector libraries and have subtly different
+output. You likely need to change your URL_TEMPLATE if you are migrating from a different
+telemetry library so note carefully this syntax.
 
 ### EnvironCarrier
 
