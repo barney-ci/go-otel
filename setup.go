@@ -2,13 +2,10 @@ package otel
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
-	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -97,14 +94,6 @@ func WithLogger(logger logr.Logger) setupOptionFunc {
 	})
 }
 
-// WithErrorPrinter is now deprecated and does not do anything.
-// Errors are now printed by default. This can be changed by using
-// the WithLogger optionfunc.
-// Deprecated: Use WithLogger instead.
-func WithErrorPrinter(_ interface{}) setupOptionFunc {
-	return setupOptionFunc(func(opts *setupConfig) {})
-}
-
 // WithSampler causes JaegerSetup to configure Jaeger
 // with the provided sampler only
 func WithSampler(s trace.Sampler) setupOptionFunc {
@@ -174,8 +163,7 @@ func JaegerSetup(name string, with ...setupOptionFunc) (
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New(fmt.Sprintf("%s", r))
-			opts.logger.Error(err, "panic occurred in JaegerSetup")
+			opts.logger.Error(fmt.Errorf("%s", r), "panic occurred in JaegerSetup")
 		}
 	}()
 	for _, fn := range with {
@@ -209,7 +197,7 @@ func JaegerSetup(name string, with ...setupOptionFunc) (
 			ctx = context.Background()
 		}
 		err := tp.Shutdown(ctx)
-		opts.logger.Error(err, "Shutdown error")
+		opts.logger.Error(err, "jaeger shutdown error")
 		return err
 	})
 
