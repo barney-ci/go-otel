@@ -121,7 +121,6 @@ func WithRemoteSampler() setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
 		if samplerURL := os.Getenv(EnvSamplerTemplateName); samplerURL != "" {
 			samplerURL = os.ExpandEnv(samplerURL)
-			samplerURL = strings.ReplaceAll(samplerURL, "{}", url.QueryEscape(opts.name))
 			opts.sampler = jaegerremote.New(opts.name,
 				jaegerremote.WithSamplingServerURL(samplerURL),
 				jaegerremote.WithInitialSampler(opts.sampler),
