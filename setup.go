@@ -100,6 +100,7 @@ func WithLogger(logger logr.Logger) setupOptionFunc {
 // WithErrorPrinter is now deprecated and does not do anything.
 // Errors are now printed by default. This can be changed by using
 // the WithLogger optionfunc.
+// Deprecated: Use WithLogger instead.
 func WithErrorPrinter(_ interface{}) setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {})
 }
