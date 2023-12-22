@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -110,6 +111,20 @@ func WithRemoteSampler() setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
 		if samplerURL := os.Getenv(EnvSamplerTemplateName); samplerURL != "" {
 			samplerURL = os.ExpandEnv(samplerURL)
+
+			// NB an older version of this library used a different
+			// url format for the remote sampler. Most likely if the
+			// given URL contains a `{}` then they are using the old
+			// url format.
+			if strings.Contains(samplerURL, "{}") {
+				opts.logger.Error(
+					fmt.Errorf(
+						"jaeger remoteSampler URL %q contains unresolved `{}`",
+						samplerURL),
+					"failed to instantiate jaeger remote sampling",
+				)
+
+			}
 			opts.sampler = jaegerremote.New(opts.name,
 				jaegerremote.WithSamplingServerURL(samplerURL),
 				jaegerremote.WithInitialSampler(opts.sampler),
