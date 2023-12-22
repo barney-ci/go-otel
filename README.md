@@ -25,10 +25,8 @@ spec:
           value: http://${OTEL_EXPORTER_JAEGER_AGENT_HOST}:5778/
 ```
 
-Please note that there are a few similar-looking URLs floating around for the URL_TEMPLATE.
-The different URLs are meant for different collector libraries and have subtly different
-output. You likely need to change your URL_TEMPLATE if you are migrating from a different
-telemetry library so note carefully this syntax.
+Please note that the URL_TEMPLATE should *not* be formed with `/sampling` or `/sampling?service={}`,
+and that the use of `{}` to designate the TracerProvider name is no longer supported.
 
 ### EnvironCarrier
 

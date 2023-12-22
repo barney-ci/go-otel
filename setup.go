@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -109,6 +110,10 @@ func WithSampler(s trace.Sampler) setupOptionFunc {
 func WithRemoteSampler() setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
 		if samplerURL := os.Getenv(EnvSamplerTemplateName); samplerURL != "" {
+			if strings.Contains(samplerURL, "{}") {
+				panic(fmt.Sprintf("%s no longer supports {} macro; "+
+					"please see the barney.ci/go-otel readme", EnvSamplerTemplateName))
+			}
 			samplerURL = os.ExpandEnv(samplerURL)
 			opts.sampler = jaegerremote.New(opts.name,
 				jaegerremote.WithSamplingServerURL(samplerURL),
