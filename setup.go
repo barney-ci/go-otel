@@ -202,7 +202,9 @@ func JaegerSetup(name string, with ...setupOptionFunc) (
 			ctx = context.Background()
 		}
 		err := tp.Shutdown(ctx)
-		opts.logger.Error(err, "jaeger shutdown error")
+		if err != nil {
+			opts.logger.Error(err, "jaeger shutdown error")
+		}
 		return err
 	})
 
