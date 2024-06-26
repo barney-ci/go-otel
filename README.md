@@ -22,7 +22,7 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         - name: OTEL_SAMPLER_JAEGER_CONFIG_URL_TEMPLATE
-          value: http://${OTEL_EXPORTER_JAEGER_AGENT_HOST}:5778/
+          value: http://${OTEL_EXPORTER_JAEGER_AGENT_HOST}:5778/sampling
 ```
 
 Please note that the URL_TEMPLATE should *not* be formed with `/sampling` or `/sampling?service={}`,
