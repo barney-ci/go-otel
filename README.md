@@ -25,7 +25,7 @@ spec:
           value: http://${OTEL_EXPORTER_JAEGER_AGENT_HOST}:5778/sampling
 ```
 
-Please note that the URL_TEMPLATE should *not* be formed with `/sampling` or `/sampling?service={}`,
+Please note that the URL_TEMPLATE should *not* be formed `/sampling?service={}`,
 and that the use of `{}` to designate the TracerProvider name is no longer supported.
 
 ### EnvironCarrier
