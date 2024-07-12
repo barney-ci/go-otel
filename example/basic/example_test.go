@@ -32,7 +32,6 @@ func setup(ctx context.Context) {
 		otelb.WithGeneralPropagatorSetup(),
 		otelb.WithRemoteSampler(),
 		otelb.WithAgentExporter(),
-		otelb.WithSDKAndHostInfo(),
 	)
 	if err != nil {
 		panic(err)
