@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/go-logr/stdr"
 	"go.opentelemetry.io/contrib/samplers/jaegerremote"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -21,13 +23,14 @@ import (
 )
 
 type setupConfig struct {
-	name            string
-	envGate         bool
-	shutdownTimeout time.Duration
-	logger          logr.Logger
-	exporter        trace.SpanExporter
-	sampler         trace.Sampler
-	propagator      propagation.TextMapPropagator
+	name              string
+	envGate           bool
+	shutdownTimeout   time.Duration
+	logger            logr.Logger
+	exporter          trace.SpanExporter
+	sampler           trace.Sampler
+	propagator        propagation.TextMapPropagator
+	addSDKAndHostInfo bool
 }
 
 type setupOptionFunc func(*setupConfig)
@@ -136,6 +139,28 @@ func WithAgentExporter() setupOptionFunc {
 	})
 }
 
+func WithSDKAndHostInfo() setupOptionFunc {
+	return setupOptionFunc(func(opts *setupConfig) {
+		opts.addSDKAndHostInfo = true
+	})
+}
+
+func getIPAddress() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, addr := range addrs {
+		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+			if ipNet.IP.To4() != nil {
+				return ipNet.IP.String(), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("no IP address found")
+}
+
 // JaegerSetup returns a jaeger TracerProvider
 // and a closer function to shut down the provider.
 //
@@ -183,12 +208,34 @@ func JaegerSetup(name string, with ...setupOptionFunc) (
 		otel.SetTextMapPropagator(opts.propagator)
 	}
 
+	attrs := []attribute.KeyValue{
+		semconv.ServiceNameKey.String(name),
+	}
+
+	if opts.addSDKAndHostInfo {
+		attrs = append(attrs,
+			semconv.TelemetrySDKNameKey.String("opentelemetry"),
+			semconv.TelemetrySDKVersionKey.String(otel.Version()),
+		)
+
+		if ip, err := getIPAddress(); err != nil {
+			opts.logger.Error(fmt.Errorf("getIPAddress: %w", err), "failed to find host IP address")
+		} else {
+			attrs = append(attrs, semconv.NetHostIPKey.String(ip))
+		}
+
+		if host, err := os.Hostname(); err != nil {
+			opts.logger.Error(fmt.Errorf("Hostname: %w", err), "os.Hostname() failed")
+		} else {
+			attrs = append(attrs, semconv.HostNameKey.String(host))
+		}
+	}
+
+	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
 	tp = trace.NewTracerProvider(
 		trace.WithBatcher(opts.exporter),
 		trace.WithSampler(opts.sampler),
-		trace.WithResource(resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(name))),
+		trace.WithResource(res),
 	)
 
 	closer = closerFunc(func() error {
