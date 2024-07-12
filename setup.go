@@ -23,14 +23,13 @@ import (
 )
 
 type setupConfig struct {
-	name              string
-	envGate           bool
-	shutdownTimeout   time.Duration
-	logger            logr.Logger
-	exporter          trace.SpanExporter
-	sampler           trace.Sampler
-	propagator        propagation.TextMapPropagator
-	addSDKAndHostInfo bool
+	name            string
+	envGate         bool
+	shutdownTimeout time.Duration
+	logger          logr.Logger
+	exporter        trace.SpanExporter
+	sampler         trace.Sampler
+	propagator      propagation.TextMapPropagator
 }
 
 type setupOptionFunc func(*setupConfig)
@@ -139,12 +138,6 @@ func WithAgentExporter() setupOptionFunc {
 	})
 }
 
-func WithSDKAndHostInfo() setupOptionFunc {
-	return setupOptionFunc(func(opts *setupConfig) {
-		opts.addSDKAndHostInfo = true
-	})
-}
-
 func getIPAddress() (string, error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -210,32 +203,26 @@ func JaegerSetup(name string, with ...setupOptionFunc) (
 
 	attrs := []attribute.KeyValue{
 		semconv.ServiceNameKey.String(name),
+		semconv.TelemetrySDKNameKey.String("opentelemetry"),
+		semconv.TelemetrySDKVersionKey.String(otel.Version()),
 	}
 
-	if opts.addSDKAndHostInfo {
-		attrs = append(attrs,
-			semconv.TelemetrySDKNameKey.String("opentelemetry"),
-			semconv.TelemetrySDKVersionKey.String(otel.Version()),
-		)
-
-		if ip, err := getIPAddress(); err != nil {
-			opts.logger.Error(fmt.Errorf("getIPAddress: %w", err), "failed to find host IP address")
-		} else {
-			attrs = append(attrs, semconv.NetHostIPKey.String(ip))
-		}
-
-		if host, err := os.Hostname(); err != nil {
-			opts.logger.Error(fmt.Errorf("Hostname: %w", err), "os.Hostname() failed")
-		} else {
-			attrs = append(attrs, semconv.HostNameKey.String(host))
-		}
+	if ip, err := getIPAddress(); err != nil {
+		opts.logger.Error(fmt.Errorf("getIPAddress: %w", err), "failed to find host IP address")
+	} else {
+		attrs = append(attrs, semconv.NetHostIPKey.String(ip))
 	}
 
-	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
+	if host, err := os.Hostname(); err != nil {
+		opts.logger.Error(fmt.Errorf("Hostname: %w", err), "os.Hostname() failed")
+	} else {
+		attrs = append(attrs, semconv.HostNameKey.String(host))
+	}
+
 	tp = trace.NewTracerProvider(
 		trace.WithBatcher(opts.exporter),
 		trace.WithSampler(opts.sampler),
-		trace.WithResource(res),
+		trace.WithResource(resource.NewWithAttributes(semconv.SchemaURL, attrs...)),
 	)
 
 	closer = closerFunc(func() error {
