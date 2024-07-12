@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"regexp"
+	"strconv"
 
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -105,12 +106,16 @@ func (tc UberTraceContext) extract(carrier propagation.TextMapCarrier) trace.Spa
 	}
 	copy(scc.SpanID[:], spanID[:8])
 
-	flags, err := hex.DecodeString(matches[4])
+	flags, err := strconv.ParseInt(matches[4], 16, 64)
 	if err != nil {
+		for i, v := range matches {
+			fmt.Printf("[%v]: %q\n", i, v)
+		}
+		fmt.Println("could not decode:", matches[4])
 		return trace.SpanContext{}
 	}
 	// Clear all flags other than the trace-context supported sampling bit.
-	scc.TraceFlags = trace.TraceFlags(flags[0]) & trace.FlagsSampled
+	scc.TraceFlags = trace.TraceFlags(flags) & trace.FlagsSampled
 
 	sc := trace.NewSpanContext(scc)
 	if !sc.IsValid() {
