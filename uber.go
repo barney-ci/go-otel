@@ -108,10 +108,6 @@ func (tc UberTraceContext) extract(carrier propagation.TextMapCarrier) trace.Spa
 
 	flags, err := strconv.ParseInt(matches[4], 16, 64)
 	if err != nil {
-		for i, v := range matches {
-			fmt.Printf("[%v]: %q\n", i, v)
-		}
-		fmt.Println("could not decode:", matches[4])
 		return trace.SpanContext{}
 	}
 	// Clear all flags other than the trace-context supported sampling bit.
