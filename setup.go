@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/go-logr/stdr"
 	"go.opentelemetry.io/contrib/samplers/jaegerremote"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -26,7 +25,7 @@ type setupConfig struct {
 	name            string
 	envGate         bool
 	shutdownTimeout time.Duration
-	logger          logr.Logger
+	logger          *slog.Logger
 	exporter        trace.SpanExporter
 	sampler         trace.Sampler
 	propagator      propagation.TextMapPropagator
@@ -93,9 +92,8 @@ func WithGeneralPropagatorSetup() setupOptionFunc {
 
 // WithLogger configures the given logger to be used for printing errors
 // or info at runtime emitted by the tracer implementation. If unset,
-// a default value of github.com/go-logr/stdr.New(log.Default()) will
-// be used.
-func WithLogger(logger logr.Logger) setupOptionFunc {
+// a default value of slog.Default() will be used.
+func WithLogger(logger *slog.Logger) setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
 		opts.logger = logger
 	})
@@ -137,7 +135,7 @@ func WithRemoteSampler() setupOptionFunc {
 			opts.sampler = jaegerremote.New(opts.name,
 				jaegerremote.WithSamplingServerURL(samplingURL),
 				jaegerremote.WithInitialSampler(opts.sampler),
-				jaegerremote.WithLogger(opts.logger),
+				jaegerremote.WithLogger(logr.FromSlogHandler(opts.logger.Handler())),
 			)
 		}
 	})
@@ -169,7 +167,7 @@ func getIPAddress() (string, error) {
 //
 // It's a good idea to pass WithLogger first, so errors
 // raised by subsequent options will be sent to that callback.
-func OtelSetup(name string, with ...setupOptionFunc) (
+func OtelSetup(ctx context.Context, name string, with ...setupOptionFunc) (
 	tp *trace.TracerProvider, closer closerFunc, err error,
 ) {
 	// Always return working no-ops instead of nils
@@ -187,11 +185,11 @@ func OtelSetup(name string, with ...setupOptionFunc) (
 		name:     name,
 		sampler:  trace.ParentBased(trace.AlwaysSample()),
 		exporter: nullExporter{},
-		logger:   stdr.New(log.Default()),
+		logger:   slog.Default(),
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			opts.logger.Error(fmt.Errorf("%s", r), "panic occurred in OtelSetup")
+			opts.logger.ErrorContext(ctx, "panic occurred in OtelSetup", "error", r)
 		}
 	}()
 	for _, fn := range with {
@@ -213,13 +211,13 @@ func OtelSetup(name string, with ...setupOptionFunc) (
 	}
 
 	if ip, err := getIPAddress(); err != nil {
-		opts.logger.Error(fmt.Errorf("getIPAddress: %w", err), "failed to find host IP address")
+		opts.logger.ErrorContext(ctx, "failed to find host IP address", "error", err)
 	} else {
 		attrs = append(attrs, semconv.HostIPKey.String(ip))
 	}
 
 	if host, err := os.Hostname(); err != nil {
-		opts.logger.Error(fmt.Errorf("Hostname: %w", err), "os.Hostname() failed")
+		opts.logger.ErrorContext(ctx, "os.Hostname() failed", "error", err)
 	} else {
 		attrs = append(attrs, semconv.HostNameKey.String(host))
 	}
@@ -242,7 +240,7 @@ func OtelSetup(name string, with ...setupOptionFunc) (
 		}
 		err := tp.Shutdown(ctx)
 		if err != nil {
-			opts.logger.Error(err, "otel shutdown error")
+			opts.logger.ErrorContext(ctx, "otel shutdown error", "error", err)
 		}
 		return err
 	})
