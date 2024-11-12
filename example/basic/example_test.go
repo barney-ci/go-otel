@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	otelb "barney.ci/go-otel"
@@ -20,9 +19,7 @@ import (
 var tracer trace.Tracer
 
 func setup(ctx context.Context) {
-	os.Setenv("JAEGER_ENABLED", "true")
-
-	tp, closer, err := otelb.JaegerSetup(
+	tp, closer, err := otelb.OtelSetup(
 		"barney.ci/go-otel/example/basic",
 		// logger first so that any errors can be reported.
 		otelb.WithLogger(logr.FromContextOrDiscard(ctx)),
@@ -31,7 +28,7 @@ func setup(ctx context.Context) {
 		otelb.WithShutdownTimeout(time.Minute),
 		otelb.WithGeneralPropagatorSetup(),
 		otelb.WithRemoteSampler(),
-		otelb.WithAgentExporter(),
+		otelb.WithOtlpExporter(),
 	)
 	if err != nil {
 		panic(err)
@@ -60,8 +57,7 @@ func doTracing(ctx context.Context) {
 }
 
 func ExampleTracer() {
-	// - OTEL_EXPORTER_JAEGER_AGENT_HOST is used for the agent address host
-	// - OTEL_EXPORTER_JAEGER_AGENT_PORT is used for the agent address port
+	// - OTEL_EXPORTER_OTLP_ENDPOINT is used for the otlp exporter
 
 	ctx := context.TODO()
 	setup(ctx)

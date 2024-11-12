@@ -2,9 +2,9 @@
 
 This repo contains OpenTelemetry-related code.
 
-### JaegerSetup
+### OtelSetup
 
-JaegerSetup provides boilerplate, slightly Arista-optimized production of Jaeger TracerProviders.
+OtelSetup provides boilerplate, slightly Arista-optimized production of Otel TracerProviders.
 
 Typical applications require some environment. Kubernetes example:
 
@@ -15,18 +15,22 @@ spec:
     spec:
       containers:
         env:
-        - name: JAEGER_ENABLED
+        - name: OTEL_SDK_DISABLED
+          value: "false"
+        - name: OTEL_EXPORTER_OTLP_INSECURE
           value: "true"
-        - name: OTEL_EXPORTER_JAEGER_AGENT_HOST
+        - name: HOST_IP
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        - name: OTEL_SAMPLER_JAEGER_CONFIG_URL_TEMPLATE
-          value: http://${OTEL_EXPORTER_JAEGER_AGENT_HOST}:5778/sampling
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://$(HOST_IP):4317"
+        - name: OTEL_REMOTE_SAMPLING_URL
+          value: "http://$(HOST_IP):5778/sampling"
 ```
 
-Please note that the URL_TEMPLATE should *not* be formed `/sampling?service={}`,
-and that the use of `{}` to designate the TracerProvider name is no longer supported.
+The old envs `OTEL_EXPORTER_JAEGER_AGENT_HOST`, `OTEL_SAMPLER_JAEGER_CONFIG_URL_TEMPLATE`, and `JAEGER_ENABLED` are no longer used.
+The grpc otel exporter can be configured through the standard envs described https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc#pkg-overview
 
 ### EnvironCarrier
 
