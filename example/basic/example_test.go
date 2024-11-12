@@ -7,10 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	otelb "barney.ci/go-otel"
-	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -20,9 +20,10 @@ var tracer trace.Tracer
 
 func setup(ctx context.Context) {
 	tp, closer, err := otelb.OtelSetup(
+		ctx,
 		"barney.ci/go-otel/example/basic",
 		// logger first so that any errors can be reported.
-		otelb.WithLogger(logr.FromContextOrDiscard(ctx)),
+		otelb.WithLogger(slog.Default()),
 
 		otelb.WithEnvGate(),
 		otelb.WithShutdownTimeout(time.Minute),
