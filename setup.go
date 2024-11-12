@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/contrib/samplers/jaegerremote"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	trace "go.opentelemetry.io/otel/sdk/trace"
@@ -42,9 +42,13 @@ func (f closerFunc) Close() error {
 	return f()
 }
 
-const EnvSamplerTemplateName = "OTEL_SAMPLER_JAEGER_CONFIG_URL_TEMPLATE"
-const EnvGateName = "JAEGER_ENABLED"
+const EnvSamplingUrl = "OTEL_REMOTE_SAMPLING_URL"
 const EnvGateCue = "true"
+
+// These envs are standard. See:
+// https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
+// https://opentelemetry.io/docs/specs/otel/protocol/exporter/
+const EnvGateName = "OTEL_SDK_DISABLED"
 
 // nullExporter implements the trace.SpanExporter interface
 type nullExporter struct{}
@@ -57,8 +61,8 @@ func (n nullExporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// WithEnvGate causes a call to JaegerSetup to be a no-op
-// unless the environment variable defined by EnvGatename
+// WithEnvGate causes a call to OtelSetup to be a no-op
+// if the environment variable defined by EnvGatename
 // is set to the value defined by EnvGateCue
 func WithEnvGate() setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
@@ -67,14 +71,14 @@ func WithEnvGate() setupOptionFunc {
 }
 
 // WithShutdownTimeout limits the amount of time
-// that the close function returned by JaegerSetup may wait
+// that the close function returned by OtelSetup may wait
 func WithShutdownTimeout(t time.Duration) setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
 		opts.shutdownTimeout = t
 	})
 }
 
-// WithGeneralPropagatorSetup causes JaegerSetup to configure
+// WithGeneralPropagatorSetup causes OtelSetup to configure
 // the default propagator with some basic propagators
 func WithGeneralPropagatorSetup() setupOptionFunc {
 	p := propagation.NewCompositeTextMapPropagator(
@@ -97,7 +101,7 @@ func WithLogger(logger logr.Logger) setupOptionFunc {
 	})
 }
 
-// WithSampler causes JaegerSetup to configure Jaeger
+// WithSampler causes OtelSetup to configure otel
 // with the provided sampler only
 func WithSampler(s trace.Sampler) setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
@@ -105,36 +109,37 @@ func WithSampler(s trace.Sampler) setupOptionFunc {
 	})
 }
 
-// WithRemoteSampler causes JaegerSetup to configure Jaeger
+// WithOtlpExporter causes OtelSetup to configure an
+// exporter targeting the exporter otlp endpoint
+func WithOtlpExporter() setupOptionFunc {
+	return setupOptionFunc(func(opts *setupConfig) {
+		exporter, err := otlptracegrpc.New(context.Background())
+		if err != nil {
+			panic(fmt.Sprintf("cannot create otlp exporter: %s", err))
+		}
+
+		opts.exporter = exporter
+	})
+}
+
+// WithRemoteSampler causes OtelSetup to be configured
 // with a remote sampler URL constructed using the environment
-// variable defined by EnvSamplerTemplateName, falling back
+// variable defined by EnvSamplingUrl, falling back
 // to any previously configured sampler
 func WithRemoteSampler() setupOptionFunc {
 	return setupOptionFunc(func(opts *setupConfig) {
-		if samplerURL := os.Getenv(EnvSamplerTemplateName); samplerURL != "" {
-			if strings.Contains(samplerURL, "{}") {
+		if samplingURL := os.Getenv(EnvSamplingUrl); samplingURL != "" {
+			if strings.Contains(samplingURL, "{}") {
 				panic(fmt.Sprintf("%s no longer supports {} macro; "+
-					"please see the barney.ci/go-otel readme", EnvSamplerTemplateName))
+					"please see the barney.ci/go-otel readme", EnvSamplingUrl))
 			}
-			samplerURL = os.ExpandEnv(samplerURL)
+			samplingURL = os.ExpandEnv(samplingURL)
 			opts.sampler = jaegerremote.New(opts.name,
-				jaegerremote.WithSamplingServerURL(samplerURL),
+				jaegerremote.WithSamplingServerURL(samplingURL),
 				jaegerremote.WithInitialSampler(opts.sampler),
 				jaegerremote.WithLogger(opts.logger),
 			)
 		}
-	})
-}
-
-// WithAgentExpoter causes JaegerSetup to configure an
-// exporter targeting the Jaeger agent endpoint
-func WithAgentExporter() setupOptionFunc {
-	return setupOptionFunc(func(opts *setupConfig) {
-		exporter, err := jaeger.New(jaeger.WithAgentEndpoint())
-		if err != nil {
-			panic(fmt.Sprintf("cannot create jaeger exporter: %s", err))
-		}
-		opts.exporter = exporter
 	})
 }
 
@@ -154,7 +159,7 @@ func getIPAddress() (string, error) {
 	return "", fmt.Errorf("no IP address found")
 }
 
-// JaegerSetup returns a jaeger TracerProvider
+// OtelSetup returns a otel TracerProvider
 // and a closer function to shut down the provider.
 //
 // Options order can be important. For example, WithRemoteSampler
@@ -164,7 +169,7 @@ func getIPAddress() (string, error) {
 //
 // It's a good idea to pass WithLogger first, so errors
 // raised by subsequent options will be sent to that callback.
-func JaegerSetup(name string, with ...setupOptionFunc) (
+func OtelSetup(name string, with ...setupOptionFunc) (
 	tp *trace.TracerProvider, closer closerFunc, err error,
 ) {
 	// Always return working no-ops instead of nils
@@ -180,20 +185,20 @@ func JaegerSetup(name string, with ...setupOptionFunc) (
 	// Apply options and return an error if one panics
 	opts := &setupConfig{
 		name:     name,
-		sampler:  trace.AlwaysSample(),
+		sampler:  trace.ParentBased(trace.AlwaysSample()),
 		exporter: nullExporter{},
 		logger:   stdr.New(log.Default()),
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			opts.logger.Error(fmt.Errorf("%s", r), "panic occurred in JaegerSetup")
+			opts.logger.Error(fmt.Errorf("%s", r), "panic occurred in OtelSetup")
 		}
 	}()
 	for _, fn := range with {
 		fn(opts)
 	}
 
-	if opts.envGate && os.Getenv(EnvGateName) != EnvGateCue {
+	if opts.envGate && os.Getenv(EnvGateName) == EnvGateCue {
 		return
 	}
 
@@ -237,7 +242,7 @@ func JaegerSetup(name string, with ...setupOptionFunc) (
 		}
 		err := tp.Shutdown(ctx)
 		if err != nil {
-			opts.logger.Error(err, "jaeger shutdown error")
+			opts.logger.Error(err, "otel shutdown error")
 		}
 		return err
 	})
