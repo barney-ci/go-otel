@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	trace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 )
 
 type setupConfig struct {
@@ -210,7 +210,7 @@ func JaegerSetup(name string, with ...setupOptionFunc) (
 	if ip, err := getIPAddress(); err != nil {
 		opts.logger.Error(fmt.Errorf("getIPAddress: %w", err), "failed to find host IP address")
 	} else {
-		attrs = append(attrs, semconv.NetHostIPKey.String(ip))
+		attrs = append(attrs, semconv.HostIPKey.String(ip))
 	}
 
 	if host, err := os.Hostname(); err != nil {
