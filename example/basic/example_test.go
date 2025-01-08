@@ -13,6 +13,7 @@ import (
 	otelb "barney.ci/go-otel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -53,7 +54,9 @@ func doTracing(ctx context.Context) {
 
 	val := 42
 	span.AddEvent("log", trace.WithAttributes(attribute.Int("val", val)))
-	span.RecordError(errors.New("found an error"))
+	err := errors.New("found an error")
+	span.RecordError(err)
+	span.SetStatus(codes.Error, err.Error())
 	fmt.Println("sending a root span with an error")
 }
 
