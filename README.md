@@ -15,10 +15,6 @@ spec:
     spec:
       containers:
         env:
-        - name: OTEL_SDK_DISABLED
-          value: "false"
-        - name: OTEL_EXPORTER_OTLP_INSECURE
-          value: "true"
         - name: HOST_IP
           valueFrom:
             fieldRef:
