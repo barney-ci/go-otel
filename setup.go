@@ -31,7 +31,7 @@ type setupConfig struct {
 	propagator      propagation.TextMapPropagator
 }
 
-type setupOptionFunc func(*setupConfig)
+type SetupOptionFunc func(*setupConfig)
 
 type closerFunc func() error
 
@@ -63,29 +63,29 @@ func (n nullExporter) Shutdown(ctx context.Context) error {
 // WithEnvGate causes a call to OtelSetup to be a no-op
 // if the environment variable defined by EnvGatename
 // is set to the value defined by EnvGateCue
-func WithEnvGate() setupOptionFunc {
-	return setupOptionFunc(func(opts *setupConfig) {
+func WithEnvGate() SetupOptionFunc {
+	return SetupOptionFunc(func(opts *setupConfig) {
 		opts.envGate = true
 	})
 }
 
 // WithShutdownTimeout limits the amount of time
 // that the close function returned by OtelSetup may wait
-func WithShutdownTimeout(t time.Duration) setupOptionFunc {
-	return setupOptionFunc(func(opts *setupConfig) {
+func WithShutdownTimeout(t time.Duration) SetupOptionFunc {
+	return SetupOptionFunc(func(opts *setupConfig) {
 		opts.shutdownTimeout = t
 	})
 }
 
 // WithGeneralPropagatorSetup causes OtelSetup to configure
 // the default propagator with some basic propagators
-func WithGeneralPropagatorSetup() setupOptionFunc {
+func WithGeneralPropagatorSetup() SetupOptionFunc {
 	p := propagation.NewCompositeTextMapPropagator(
 		propagation.Baggage{},
 		propagation.TraceContext{},
 		UberTraceContext{},
 	)
-	return setupOptionFunc(func(opts *setupConfig) {
+	return SetupOptionFunc(func(opts *setupConfig) {
 		opts.propagator = p
 	})
 }
@@ -93,24 +93,24 @@ func WithGeneralPropagatorSetup() setupOptionFunc {
 // WithLogger configures the given logger to be used for printing errors
 // or info at runtime emitted by the tracer implementation. If unset,
 // a default value of slog.Default() will be used.
-func WithLogger(logger *slog.Logger) setupOptionFunc {
-	return setupOptionFunc(func(opts *setupConfig) {
+func WithLogger(logger *slog.Logger) SetupOptionFunc {
+	return SetupOptionFunc(func(opts *setupConfig) {
 		opts.logger = logger
 	})
 }
 
 // WithSampler causes OtelSetup to configure otel
 // with the provided sampler only
-func WithSampler(s trace.Sampler) setupOptionFunc {
-	return setupOptionFunc(func(opts *setupConfig) {
+func WithSampler(s trace.Sampler) SetupOptionFunc {
+	return SetupOptionFunc(func(opts *setupConfig) {
 		opts.sampler = s
 	})
 }
 
 // WithOtlpExporter causes OtelSetup to configure an
 // exporter targeting the exporter otlp endpoint
-func WithOtlpExporter() setupOptionFunc {
-	return setupOptionFunc(func(opts *setupConfig) {
+func WithOtlpExporter() SetupOptionFunc {
+	return SetupOptionFunc(func(opts *setupConfig) {
 		exporter, err := otlptracegrpc.New(context.Background())
 		if err != nil {
 			panic(fmt.Sprintf("cannot create otlp exporter: %s", err))
@@ -124,8 +124,8 @@ func WithOtlpExporter() setupOptionFunc {
 // with a remote sampler URL constructed using the environment
 // variable defined by EnvSamplingUrl, falling back
 // to any previously configured sampler
-func WithRemoteSampler() setupOptionFunc {
-	return setupOptionFunc(func(opts *setupConfig) {
+func WithRemoteSampler() SetupOptionFunc {
+	return SetupOptionFunc(func(opts *setupConfig) {
 		if samplingURL := os.Getenv(EnvSamplingUrl); samplingURL != "" {
 			if strings.Contains(samplingURL, "{}") {
 				panic(fmt.Sprintf("%s no longer supports {} macro; "+
@@ -167,7 +167,7 @@ func getIPAddress() (string, error) {
 //
 // It's a good idea to pass WithLogger first, so errors
 // raised by subsequent options will be sent to that callback.
-func OtelSetup(ctx context.Context, name string, with ...setupOptionFunc) (
+func OtelSetup(ctx context.Context, name string, with ...SetupOptionFunc) (
 	tp *trace.TracerProvider, closer closerFunc, err error,
 ) {
 	// Always return working no-ops instead of nils
