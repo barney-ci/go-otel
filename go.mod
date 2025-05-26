@@ -8,7 +8,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/segmentio/kafka-go v0.4.48
 	github.com/twmb/franz-go v1.19.4
-	go.opentelemetry.io/contrib/samplers/jaegerremote v0.29.0
+	go.opentelemetry.io/contrib/samplers/jaegerremote v0.30.0
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.36.0
 	go.opentelemetry.io/otel/sdk v1.36.0
@@ -18,9 +18,11 @@ require (
 require (
 	github.com/cenkalti/backoff/v5 v5.0.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
+	github.com/jaegertracing/jaeger-idl v0.5.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.11.2 // indirect
