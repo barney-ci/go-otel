@@ -13,7 +13,6 @@ import (
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/samplers/jaegerremote"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -204,28 +203,23 @@ func OtelSetup(ctx context.Context, name string, with ...SetupOptionFunc) (
 		otel.SetTextMapPropagator(opts.propagator)
 	}
 
-	attrs := []attribute.KeyValue{
-		semconv.ServiceNameKey.String(name),
-		semconv.TelemetrySDKNameKey.String("opentelemetry"),
-		semconv.TelemetrySDKVersionKey.String(otel.Version()),
-	}
-
-	if ip, err := getIPAddress(); err != nil {
-		opts.logger.ErrorContext(ctx, "failed to find host IP address", "error", err)
-	} else {
-		attrs = append(attrs, semconv.HostIPKey.String(ip))
-	}
-
-	if host, err := os.Hostname(); err != nil {
-		opts.logger.ErrorContext(ctx, "os.Hostname() failed", "error", err)
-	} else {
-		attrs = append(attrs, semconv.HostNameKey.String(host))
-	}
+	res, err := resource.New(
+		ctx,
+		resource.WithFromEnv(),
+		resource.WithTelemetrySDK(),
+		resource.WithProcess(),
+		resource.WithOS(),
+		resource.WithContainer(),
+		resource.WithHost(),
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String(name),
+		),
+	)
 
 	tp = trace.NewTracerProvider(
 		trace.WithBatcher(opts.exporter),
 		trace.WithSampler(opts.sampler),
-		trace.WithResource(resource.NewWithAttributes(semconv.SchemaURL, attrs...)),
+		trace.WithResource(res),
 	)
 
 	closer = closerFunc(func() error {
