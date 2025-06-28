@@ -207,7 +207,16 @@ func OtelSetup(ctx context.Context, name string, with ...SetupOptionFunc) (
 		ctx,
 		resource.WithFromEnv(),
 		resource.WithTelemetrySDK(),
-		resource.WithProcess(),
+
+		// Using the individual process ones to avoid the processOwnerDetector
+		// which doesn't work properly without cgo=1 or the USER env defined
+		resource.WithProcessPID(),
+		resource.WithProcessExecutableName(),
+		resource.WithProcessExecutableName(),
+		resource.WithProcessRuntimeName(),
+		resource.WithProcessRuntimeVersion(),
+		resource.WithProcessRuntimeDescription(),
+
 		resource.WithOS(),
 		resource.WithContainer(),
 		resource.WithHost(),
