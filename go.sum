@@ -47,8 +47,8 @@ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
 go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
-go.opentelemetry.io/contrib/samplers/jaegerremote v0.31.0 h1:l8XCsDh7L6Z7PB+vlw1s4ufNab+ayT2RMNdvDE/UyPc=
-go.opentelemetry.io/contrib/samplers/jaegerremote v0.31.0/go.mod h1:XAOSk4bqj5vtoiY08bexeiafzxdXeLlxKFnwscvn8Fc=
+go.opentelemetry.io/contrib/samplers/jaegerremote v0.32.0 h1:oPW/SRFyHgIgxrvNhSBzqvZER2N5kRlci3/rGTOuyWo=
+go.opentelemetry.io/contrib/samplers/jaegerremote v0.32.0/go.mod h1:B9Oka5QVD0bnmZNO6gBbBta6nohD/1Z+f9waH2oXyBs=
 go.opentelemetry.io/otel v1.38.0 h1:RkfdswUDRimDg0m2Az18RKOsnI8UDzppJAtj01/Ymk8=
 go.opentelemetry.io/otel v1.38.0/go.mod h1:zcmtmQ1+YmQM9wrNsTGV/q/uyusom3P8RxwExxkZhjM=
 go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.38.0 h1:GqRJVj7UmLjCVyVJ3ZFLdPRmhDUp2zFmQe3RHIOsw24=
