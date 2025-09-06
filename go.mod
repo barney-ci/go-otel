@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/go-logr/logr v1.4.3
-	github.com/segmentio/kafka-go v0.4.48
+	github.com/segmentio/kafka-go v0.4.49
 	github.com/twmb/franz-go v1.19.5
 	go.opentelemetry.io/contrib/samplers/jaegerremote v0.31.0
 	go.opentelemetry.io/otel v1.37.0
