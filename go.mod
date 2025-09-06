@@ -8,7 +8,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/segmentio/kafka-go v0.4.49
 	github.com/twmb/franz-go v1.19.5
-	go.opentelemetry.io/contrib/samplers/jaegerremote v0.31.0
+	go.opentelemetry.io/contrib/samplers/jaegerremote v0.32.0
 	go.opentelemetry.io/otel v1.38.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.38.0
 	go.opentelemetry.io/otel/sdk v1.38.0
