@@ -32,11 +32,11 @@ type setupConfig struct {
 
 type SetupOptionFunc func(*setupConfig)
 
-type closerFunc func() error
+type CloserFunc func() error
 
-var _ io.Closer = closerFunc(nil)
+var _ io.Closer = CloserFunc(nil)
 
-func (f closerFunc) Close() error {
+func (f CloserFunc) Close() error {
 	return f()
 }
 
@@ -167,7 +167,7 @@ func getIPAddress() (string, error) {
 // It's a good idea to pass WithLogger first, so errors
 // raised by subsequent options will be sent to that callback.
 func OtelSetup(ctx context.Context, name string, with ...SetupOptionFunc) (
-	tp *trace.TracerProvider, closer closerFunc, err error,
+	tp *trace.TracerProvider, closer CloserFunc, err error,
 ) {
 	// Always return working no-ops instead of nils
 	defer func() {
@@ -175,7 +175,7 @@ func OtelSetup(ctx context.Context, name string, with ...SetupOptionFunc) (
 			tp = trace.NewTracerProvider()
 		}
 		if closer == nil {
-			closer = closerFunc(func() error { return nil })
+			closer = CloserFunc(func() error { return nil })
 		}
 	}()
 
@@ -231,7 +231,7 @@ func OtelSetup(ctx context.Context, name string, with ...SetupOptionFunc) (
 		trace.WithResource(res),
 	)
 
-	closer = closerFunc(func() error {
+	closer = CloserFunc(func() error {
 		var ctx context.Context
 		var cancel context.CancelFunc
 		if opts.shutdownTimeout > 0 {
