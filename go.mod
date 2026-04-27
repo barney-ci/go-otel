@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/go-logr/logr v1.4.3
-	github.com/segmentio/kafka-go v0.4.50
+	github.com/segmentio/kafka-go v0.4.51
 	github.com/twmb/franz-go v1.20.7
 	go.opentelemetry.io/contrib/samplers/jaegerremote v0.37.0
 	go.opentelemetry.io/otel v1.43.0
